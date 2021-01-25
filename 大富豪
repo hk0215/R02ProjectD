@@ -1,0 +1,1198 @@
+#include "DxLib.h"
+#include <stdio.h>
+#include <time.h>
+
+/* マークの番号 */
+#define SPADE 4
+#define HEART 3
+#define DIAMOND 2
+#define CLUB 1
+
+/* 絵札の番号 */
+#define JACK 11
+#define QUEEN 12
+#define KING 13
+#define ACE 1
+
+/* フィッシャー・イェーツのシャッフル */
+void shuffle(int T[], int DECK);
+// 関数のプロトタイプ宣言 //
+//int selectcard(int )
+void DelMark(int mc, int BackGreen, int SelectMark);
+void DelMhand(int mc, int tx1, int ty1, int tx2, int ty2, int BackGreen);
+void DelChand(int c, int tx1, int ty1, int tx2, int ty2, int BackGreen);
+void DisplayFcard(int mc, int fx1, int fy1, int fx2, int fy2, int Fcard[5][4]);
+void SelectCardClear(int cardcount, int Card[6][54]);
+void SPECIALRULESNUM(int SpecialRulesNum, int *Slash8Flag, int *passcount, int red, int BackGreen, int PassMessage, int *turncount);
+int Pass(int purple, int PassMessage, int BackGreen, int black, int b);
+int startPlayer(int b, int red, int BackGreen, int sPlayer, int* h, int* i, int* j);
+int FieldCardCount(int Fcard[5][4], int fieldcount);
+
+// プログラムは WinMain から始まります
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+{
+	// 画面準備 //
+	SetGraphMode(1920, 1080, 32);
+	SetBackgroundColor(25, 125, 25);
+
+	if (DxLib_Init() == -1)		// ＤＸライブラリ初期化処理
+	{
+		return -1;			// エラーが起きたら直ちに終了
+	}
+
+	// 変数宣言 //
+	int Mx, My;
+	int Tdeck[5][54], sort[5][1] = {0}, Mhand[6][54], Mhandd[6][54] = { 0 }, Chand1[5][54], Chand1d[7][54] = { 0 }, Chand2[5][54], Chand2d[7][54] = { 0 }, Chand3[5][54] = { 0 }, Chand3d[7][54] = { 0 }, T[54];
+	//Tdeck[0]:マーク,Tdeck[1]:ナンバ,Tdeck[2]:カード番号(順番),Tdeck[3]:カードの画像,Tdeck[4]:カードの強さ(3~15, Jokerは99),Mhand[5][]:カードが選択されたか
+	int Fcard[5][4] = {};
+	int dt = 0, b = 1, c, h = 0, i = 0, j = 0, r = 1, mark = 0, num = 0, com = 0, mc = 0, c1c = 0, c2c = 0, c3c = 0, s = 0, passcount = 0, A = 0;
+	int turnm = 0, turnc1 = 0, turnc2 = 0, turnc3 = 0, turncount = 0, fieldcount = 0, comjudge= 0, comselcard = 0;
+	int SpecialRulesNum = 0, Slash8Flag = 0;
+	int GameJudge = 0;
+	int tx1 = 0, ty1 = 0, tx2 = 0, ty2 = 0, Cm = 0, cx = 0, cy = 0, sx = 0, sy = 0, sc = 0, fx1 = 960, fy1 = 470, fx2 = 0, fy2 = 0, sn = 0;
+	double sel = 0;
+	int white, red, purple, black, BackGreen;
+	int sPlayer, CantSel, SelectMark, PassMessage, ClearMessage;
+
+	// フォンサイズの設定 //
+	sPlayer = CreateFontToHandle(NULL, 80, 40);
+	CantSel = CreateFontToHandle(NULL, 40, 5);
+	SelectMark = CreateFontToHandle(NULL, 70, 5);
+	PassMessage = CreateFontToHandle(NULL, 45, 5);
+	ClearMessage = CreateFontToHandle(NULL, 180, 80);
+
+	// 色の設定 //
+	white = GetColor(255, 255, 255);
+	red = GetColor(255, 30, 30);
+	purple = GetColor(230, 0, 180);
+	black = GetColor(0, 0, 0);
+	BackGreen = GetColor(25, 125, 25);
+
+	// マウスの表示設定 //
+	SetMouseDispFlag(TRUE);
+
+	// 乱数の種の生成 //
+	srand((unsigned int)time(NULL));
+
+	// トランプカードの準備 //
+	//スペード
+	int S1 = LoadGraph("Timg/spade1.png");	Tdeck[3][0] = S1;
+	int S2 = LoadGraph("Timg/spade2.png");	Tdeck[3][1] = S2;
+	int S3 = LoadGraph("Timg/spade3.png");	Tdeck[3][2] = S3;
+	int S4 = LoadGraph("Timg/spade4.png");	Tdeck[3][3] = S4;
+	int S5 = LoadGraph("Timg/spade5.png");	Tdeck[3][4] = S5;
+	int S6 = LoadGraph("Timg/spade6.png");	Tdeck[3][5] = S6;
+	int S7 = LoadGraph("Timg/spade7.png");	Tdeck[3][6] = S7;
+	int S8 = LoadGraph("Timg/spade8.png");	Tdeck[3][7] = S8;
+	int S9 = LoadGraph("Timg/spade9.png");	Tdeck[3][8] = S9;
+	int S10 = LoadGraph("Timg/spade10.png");	Tdeck[3][9] = S10;
+	int SJ = LoadGraph("Timg/spadeJ.png");	Tdeck[3][10] = SJ;
+	int SQ = LoadGraph("Timg/spadeQ.png");	Tdeck[3][11] = SQ;
+	int SK = LoadGraph("Timg/spadeK.png");	Tdeck[3][12] = SK;
+	//ハート
+	int H1 = LoadGraph("Timg/heart1.png");	Tdeck[3][13] = H1;
+	int H2 = LoadGraph("Timg/heart2.png");	Tdeck[3][14] = H2;
+	int H3 = LoadGraph("Timg/heart3.png");	Tdeck[3][15] = H3;
+	int H4 = LoadGraph("Timg/heart4.png");	Tdeck[3][16] = H4;
+	int H5 = LoadGraph("Timg/heart5.png");	Tdeck[3][17] = H5;
+	int H6 = LoadGraph("Timg/heart6.png");	Tdeck[3][18] = H6;
+	int H7 = LoadGraph("Timg/heart7.png");	Tdeck[3][19] = H7;
+	int H8 = LoadGraph("Timg/heart8.png");	Tdeck[3][20] = H8;
+	int H9 = LoadGraph("Timg/heart9.png");	Tdeck[3][21] = H9;
+	int H10 = LoadGraph("Timg/heart10.png");	Tdeck[3][22] = H10;
+	int HJ = LoadGraph("Timg/heartJ.png");	Tdeck[3][23] = HJ;
+	int HQ = LoadGraph("Timg/heartQ.png");	Tdeck[3][24] = HQ;
+	int HK = LoadGraph("Timg/heartK.png");	Tdeck[3][25] = HK;
+	//ダイヤ
+	int D1 = LoadGraph("Timg/diamond1.png");	Tdeck[3][26] = D1;
+	int D2 = LoadGraph("Timg/diamond2.png");	Tdeck[3][27] = D2;
+	int D3 = LoadGraph("Timg/diamond3.png");	Tdeck[3][28] = D3;
+	int D4 = LoadGraph("Timg/diamond4.png");	Tdeck[3][29] = D4;
+	int D5 = LoadGraph("Timg/diamond5.png");	Tdeck[3][30] = D5;
+	int D6 = LoadGraph("Timg/diamond6.png");	Tdeck[3][31] = D6;
+	int D7 = LoadGraph("Timg/diamond7.png");	Tdeck[3][32] = D7;
+	int D8 = LoadGraph("Timg/diamond8.png");	Tdeck[3][33] = D8;
+	int D9 = LoadGraph("Timg/diamond9.png");	Tdeck[3][34] = D9;
+	int D10 = LoadGraph("Timg/diamond10.png");	Tdeck[3][35] = D10;
+	int DJ = LoadGraph("Timg/diamondJ.png");	Tdeck[3][36] = DJ;
+	int DQ = LoadGraph("Timg/diamondQ.png");	Tdeck[3][37] = DQ;
+	int DK = LoadGraph("Timg/diamondK.png");	Tdeck[3][38] = DK;
+	//クラブ
+	int C1 = LoadGraph("Timg/club1.png");	Tdeck[3][39] = C1;
+	int C2 = LoadGraph("Timg/club2.png");	Tdeck[3][40] = C2;
+	int C3 = LoadGraph("Timg/club3.png");	Tdeck[3][41] = C3;
+	int C4 = LoadGraph("Timg/club4.png");	Tdeck[3][42] = C4;
+	int C5 = LoadGraph("Timg/club5.png");	Tdeck[3][43] = C5;
+	int C6 = LoadGraph("Timg/club6.png");	Tdeck[3][44] = C6;
+	int C7 = LoadGraph("Timg/club7.png");	Tdeck[3][45] = C7;
+	int C8 = LoadGraph("Timg/club8.png");	Tdeck[3][46] = C8;
+	int C9 = LoadGraph("Timg/club9.png");	Tdeck[3][47] = C9;
+	int C10 = LoadGraph("Timg/club10.png");	Tdeck[3][48] = C10;
+	int CJ = LoadGraph("Timg/clubJ.png");	Tdeck[3][49] = CJ;
+	int CQ = LoadGraph("Timg/clubQ.png");	Tdeck[3][50] = CQ;
+	int CK = LoadGraph("Timg/clubK.png");	Tdeck[3][51] = CK;
+	//トランプ裏面
+	int Tb = LoadGraph("Timg/Tillust.png");
+	// 山札作り //
+	for (mark = CLUB; mark <= SPADE; mark++)
+	{
+		for (num = ACE; num <= KING; num++)
+		{
+			Tdeck[0][dt] = mark;
+			Tdeck[1][dt] = num;
+			Tdeck[2][dt] = b;
+			Tdeck[4][dt] = r;
+			if (num == 1)	//Aceならカードの強さは14
+			{
+				Tdeck[4][dt] = 14;
+			}
+			if (num == 2)	//2ならカードの強さは15
+			{
+				Tdeck[4][dt] = 15;
+			}
+			dt++;
+			b++;
+			r++;
+		}
+		r = 1;
+	}
+	Tdeck[0][52] = 5; Tdeck[1][52] = 99; Tdeck[2][52] = 52; Tdeck[4][52] = 99;
+	int J1 = LoadGraph("Timg/joker1.png"); Tdeck[3][52] = J1;
+	Tdeck[0][53] = 5; Tdeck[1][53] = 99; Tdeck[2][53] = 53; Tdeck[4][53] = 99;
+	int J2 = LoadGraph("Timg/joker2.png"); Tdeck[3][53] = J2;
+	for (b = 0; b < 54; b++)
+	{
+		T[b] = b;
+	}
+	shuffle(T, 54);
+	// 順番を決める(誰から手札を出すか) //
+	b = 0;
+	b = rand() % 4 + 1;	//1~4の乱数
+	startPlayer(b, red, BackGreen, sPlayer, &h, &i, &j);
+	turnc1 = h;
+	turnc2 = i;
+	turnc3 = j;
+	turnm = b;
+	//SetDrawScreen(DX_SCREEN_FRONT);
+	// 手札を配る //
+	com = 3, dt = 0;	//コンピューターの数
+	for (b = 0; b < 54; b++)
+	{
+		dt = b % (com + 1);
+		switch (dt)
+		{
+			case 0:
+				Mhand[0][mc] = Tdeck[0][T[b]];
+				Mhand[1][mc] = Tdeck[1][T[b]];
+				Mhand[2][mc] = Tdeck[2][T[b]];
+				Mhand[3][mc] = Tdeck[3][T[b]];
+				Mhand[4][mc] = Tdeck[4][T[b]];
+				Mhand[5][mc] = 0;
+				mc++;
+				break;
+			case 1:
+				Chand1[0][c1c] = Tdeck[0][T[b]];
+				Chand1[1][c1c] = Tdeck[1][T[b]];
+				Chand1[2][c1c] = Tdeck[2][T[b]];
+				Chand1[3][c1c] = Tdeck[3][T[b]];
+				Chand1[4][c1c] = Tdeck[4][T[b]];
+				c1c++;
+				break;
+			case 2:
+				Chand2[0][c2c] = Tdeck[0][T[b]];
+				Chand2[1][c2c] = Tdeck[1][T[b]];
+				Chand2[2][c2c] = Tdeck[2][T[b]];
+				Chand2[3][c2c] = Tdeck[3][T[b]];
+				Chand2[4][c2c] = Tdeck[4][T[b]];
+				c2c++;
+				break;
+			case 3:
+				Chand3[0][c3c] = Tdeck[0][T[b]];
+				Chand3[1][c3c] = Tdeck[1][T[b]];
+				Chand3[2][c3c] = Tdeck[2][T[b]];
+				Chand3[3][c3c] = Tdeck[3][T[b]];
+				Chand3[4][c3c] = Tdeck[4][T[b]];
+				c3c++;
+				break;
+		}
+	}
+	// 自分の手札 //
+	tx1 = 200, ty1 = 700;	//x:0+300=300 y:1080-1-300=779
+	tx2 = tx1 + 210, ty2 = ty1 + 300;	//カード比 210:300
+	for (b = 0; b < mc; b++)	//カードを強さ順に整理
+	{
+		for (c = b + 1; c < mc; c++)
+		{
+			if (Mhand[4][b] > Mhand[4][c])
+			{
+				sort[0][0] = Mhand[0][b];
+				sort[1][0] = Mhand[1][b];
+				sort[2][0] = Mhand[2][b];
+				sort[3][0] = Mhand[3][b];
+				sort[4][0] = Mhand[4][b];
+
+				Mhand[0][b] = Mhand[0][c];
+				Mhand[1][b] = Mhand[1][c];
+				Mhand[2][b] = Mhand[2][c];
+				Mhand[3][b] = Mhand[3][c];
+				Mhand[4][b] = Mhand[4][c];
+
+				Mhand[0][c] = sort[0][0];
+				Mhand[1][c] = sort[1][0];
+				Mhand[2][c] = sort[2][0];
+				Mhand[3][c] = sort[3][0];
+				Mhand[4][c] = sort[4][0];
+			}
+		}
+	}
+	for (b = 0; b < mc; b++)
+	{
+		Mhandd[0][b] = Mhand[0][b];
+		Mhandd[1][b] = Mhand[1][b];
+		Mhandd[2][b] = Mhand[2][b];
+		Mhandd[3][b] = Mhand[3][b];
+		Mhandd[4][b] = Mhand[4][b];
+		DrawExtendGraph(tx1, ty1, tx2, ty2, Mhandd[3][b], TRUE);
+		tx1 += 100;	tx2 += 100;
+	}
+	// COMの手札 //
+	c = 0;
+	for (b = 0; b < c1c; b++)	//カードを強さ順に整理:COM1
+	{
+		for (c = b + 1; c < c1c; c++)
+		{
+			if (Chand1[4][b] > Chand1[4][c])
+			{
+				sort[0][0] = Chand1[0][b];
+				sort[1][0] = Chand1[1][b];
+				sort[2][0] = Chand1[2][b];
+				sort[3][0] = Chand1[3][b];
+				sort[4][0] = Chand1[4][b];
+
+				Chand1[0][b] = Chand1[0][c];
+				Chand1[1][b] = Chand1[1][c];
+				Chand1[2][b] = Chand1[2][c];
+				Chand1[3][b] = Chand1[3][c];
+				Chand1[4][b] = Chand1[4][c];
+
+				Chand1[0][c] = sort[0][0];
+				Chand1[1][c] = sort[1][0];
+				Chand1[2][c] = sort[2][0];
+				Chand1[3][c] = sort[3][0];
+				Chand1[4][c] = sort[4][0];
+			}
+		}
+	}
+	c = 0;
+	for (b = 0; b < c2c; b++)	//カードを強さ順に整理:COM2
+	{
+		for (c = b + 1; c < c2c; c++)
+		{
+			if (Chand2[4][b] > Chand2[4][c])
+			{
+				sort[0][0] = Chand2[0][b];
+				sort[1][0] = Chand2[1][b];
+				sort[2][0] = Chand2[2][b];
+				sort[3][0] = Chand2[3][b];
+				sort[4][0] = Chand2[4][b];
+
+				Chand2[0][b] = Chand2[0][c];
+				Chand2[1][b] = Chand2[1][c];
+				Chand2[2][b] = Chand2[2][c];
+				Chand2[3][b] = Chand2[3][c];
+				Chand2[4][b] = Chand2[4][c];
+
+				Chand2[0][c] = sort[0][0];
+				Chand2[1][c] = sort[1][0];
+				Chand2[2][c] = sort[2][0];
+				Chand2[3][c] = sort[3][0];
+				Chand2[4][c] = sort[4][0];
+			}
+		}
+	}
+	c = 0;
+	for (b = 0; b < c3c; b++)	//カードを強さ順に整理:COM3
+	{
+		for (c = b + 1; c < c3c; c++)
+		{
+			if (Chand3[4][b] > Chand3[4][c])
+			{
+				sort[0][0] = Chand3[0][b];
+				sort[1][0] = Chand3[1][b];
+				sort[2][0] = Chand3[2][b];
+				sort[3][0] = Chand3[3][b];
+				sort[4][0] = Chand3[4][b];
+
+				Chand3[0][b] = Chand3[0][c];
+				Chand3[1][b] = Chand3[1][c];
+				Chand3[2][b] = Chand3[2][c];
+				Chand3[3][b] = Chand3[3][c];
+				Chand3[4][b] = Chand3[4][c];
+
+				Chand3[0][c] = sort[0][0];
+				Chand3[1][c] = sort[1][0];
+				Chand3[2][c] = sort[2][0];
+				Chand3[3][c] = sort[3][0];
+				Chand3[4][c] = sort[4][0];
+			}
+		}
+	}
+	//COMのカードを表示
+	for (c = 0; c < com; c++)
+	{
+		switch (c)
+		{
+			case 0:
+			tx1 = 180, ty1 = 70;	//x:0 y:0
+			tx2 = tx1 + 105, ty2 = ty1 + 150;	//カード比 105:150
+			for (b = 0; b < c1c; b++)
+			{
+				Chand1d[0][b] = Chand1[0][b];
+				Chand1d[1][b] = Chand1[1][b];
+				Chand1d[2][b] = Chand1[2][b];
+				Chand1d[3][b] = Chand1[3][b];
+				Chand1d[4][b] = Chand1[4][b];
+				DrawExtendGraph(tx1, ty1, tx2, ty2, Tb, TRUE);
+				tx1 += 20;	tx2 += 20;
+			}
+			DrawStringToHandle(300, 30, "COM1", black, CantSel);
+			break;
+			case 1:
+			tx1 = 780, ty1 = 70;	//x:0 y:0
+			tx2 = tx1 + 105, ty2 = ty1 + 150;	//カード比 105:150
+			for (b = 0; b < c2c; b++)
+			{
+				Chand2d[0][b] = Chand2[0][b];
+				Chand2d[1][b] = Chand2[1][b];
+				Chand2d[2][b] = Chand2[2][b];
+				Chand2d[3][b] = Chand2[3][b];
+				Chand2d[4][b] = Chand2[4][b];
+				DrawExtendGraph(tx1, ty1, tx2, ty2, Tb, TRUE);
+				tx1 += 20;	tx2 += 20;
+			}
+			DrawStringToHandle(930, 30, "COM2", black, CantSel);
+			break;
+			case 2:
+			tx1 = 1450, ty1 = 70;	//x:0 y:0
+			tx2 = tx1 + 105, ty2 = ty1 + 150;	//カード比 105:150
+			for (b = 0; b < c3c; b++)
+			{
+				Chand3d[0][b] = Chand3[0][b];
+				Chand3d[1][b] = Chand3[1][b];
+				Chand3d[2][b] = Chand3[2][b];
+				Chand3d[3][b] = Chand3[3][b];
+				Chand3d[4][b] = Chand3[4][b];
+				DrawExtendGraph(tx1, ty1, tx2, ty2, Tb, TRUE);
+				tx1 += 20;	tx2 += 20;
+			}
+			DrawStringToHandle(1550, 30, "COM3", black, CantSel);
+			break;
+		}
+	}
+	
+	// トランプカードの選択設定 //
+	cx = 230, cy = 1000;	//カーソル表示用変数
+	sx = 230, sy = 649;		//"^"移動用変数
+	passcount = 0;
+	turncount = 1;
+	c, sn = 0;
+	while (GameJudge == 0)	//ゲームの勝敗がつくまで
+	{
+		ProcessMessage();
+		while (passcount < 3)
+		{
+			ProcessMessage();
+			// カードを出す //
+			if (turnm == turncount)
+			{
+				Cm = 0, sel = 0, b = 0, c = 0, sn = 0;
+				SpecialRulesNum = 0, Slash8Flag = 0;
+				cx = 230, cy = 1000;	//カーソル表示用変数
+				sx = 230, sy = 649;		//"^"移動用変数
+				fx1 = 960, fy1 = 470, fx2 = 0, fy2 = 0;
+				//SelectCardClear(mc, Mhandd);
+				comjudge = Fcard[4][0];
+				for (b = 0; b < 54; b++)
+				{
+					Mhandd[5][b] = 0;
+				}
+				DrawStringToHandle(10, 10, "あなたのターン", black, CantSel);
+				DrawStringToHandle(50, 600, "パス", BackGreen, PassMessage);
+				while (CheckHitKey(KEY_INPUT_RETURN) == 0)	//EnterKeyが押されるまで繰り返す
+				{
+					ProcessMessage();
+					// 自分のターン //
+					DrawStringToHandle(cx, cy, "^", white, SelectMark);
+					sx = cx;
+					if (CheckHitKey(KEY_INPUT_SPACE) == 1)
+					{
+						ProcessMessage();
+						WaitTimer(200);
+						if (Cm >= 0 && Cm < mc)	//出すカードの選択
+						{
+							if (Mhandd[5][Cm] == 0)	//未選択のカードを選択
+							{
+								c = Mhandd[1][Cm];
+								if (Mhandd[4][Cm] > comjudge)	//選択カードが場のカードよりも強いなら
+								{
+									if (sel == 0)	//最初に選択されたカードのナンバと一緒のカードしか出せない
+									{
+										sn = Mhandd[1][Cm];
+										SpecialRulesNum = Mhandd[1][Cm];
+										if (Mhandd[1][Cm] == 99)		//ジョーカーが最初に選択されたとき ※ジョーカーが最初に選択されるとバグる
+										{
+											sel++;
+											c = 100;
+											Mhandd[5][Cm] = 1;
+											DrawStringToHandle(sx, sy, "*", red, SelectMark);
+										}
+									}
+									if (c == sn)
+									{
+										sel++;
+										DrawStringToHandle(sx, sy, "*", red, SelectMark);
+										Mhandd[5][Cm] = 1;
+									}
+									if (c != sn && c != 100)			//選択されたカードが違う数字でジョーカーでもない場合
+									{
+										DrawStringToHandle(50, 600, "このカードは選択できません!", red, CantSel);
+										WaitTimer(1000);
+										DrawStringToHandle(50, 600, "このカードは選択できません!", BackGreen, CantSel);
+									}
+								}
+								else	//選択カードが場のカードよりも弱いなら
+								{
+									DrawStringToHandle(50, 600, "このカードは選択できません!", red, CantSel);
+									WaitTimer(1000);
+									DrawStringToHandle(50, 600, "このカードは選択できません!", BackGreen, CantSel);
+								}
+							}
+							else      //選択済みカードを選択
+							{
+								sn = 0;
+								DrawStringToHandle(sx, sy, "*", BackGreen, SelectMark);
+								sel--;
+								Mhandd[5][Cm] = 0;
+							}
+						}
+					}
+					// パスの選択 //
+					if (CheckHitKey(KEY_INPUT_P) == 1)
+					{
+						WaitTimer(100);
+						b = 0;
+						if (Pass(purple, PassMessage, BackGreen, black, b) == 1)
+						{
+							passcount++;
+							DrawStringToHandle(50, 600, "パス", black, PassMessage);
+							break;
+						}
+					}
+					// カーソルの動き //
+					if (CheckHitKey(KEY_INPUT_RIGHT) == 1)	//右キーが押されたら
+					{
+						Cm++;
+						if (Cm >= mc)
+						{
+							if (CheckHitKey(KEY_INPUT_RIGHT) == 1)
+							{
+								DrawStringToHandle(cx, cy, "^", BackGreen, SelectMark);
+								cx -= 100, cy = 1000;
+								Cm = mc - 1;
+							}
+						}
+						WaitTimer(200);
+						DrawStringToHandle(cx, cy, "^", BackGreen, SelectMark);
+						cx += 100;
+						DrawStringToHandle(cx, cy, "^", white, SelectMark);
+					}
+					if (CheckHitKey(KEY_INPUT_LEFT) == 1)	//左キーが押されたら
+					{
+						Cm--;
+						if (Cm < 0)
+						{
+							if (CheckHitKey(KEY_INPUT_LEFT) == 1)
+							{
+								DrawStringToHandle(cx, cy, "^", BackGreen, SelectMark);
+								cx += 100, cy = 1000;
+								Cm = 0;
+							}
+						}
+						WaitTimer(200);
+						DrawStringToHandle(cx, cy, "^", BackGreen, SelectMark);
+						cx -= 100;
+						DrawStringToHandle(cx, cy, "^", white, SelectMark);
+					}
+				}
+				// 選択されたカードを出す カード比112:160 //
+				fx1 -= (56 / sel) + (56 * (sel / 2)), fy1 = fy1 - 80;	//出すカードの1枚目の座標(左上)
+				fx2 = fx1 + 112, fy2 = fy1 + 160;
+				tx1 = 200, ty1 = 700;									//x:0+300=300 y:1080-1-300=779
+				tx2 = tx1 + 210, ty2 = ty1 + 300;						//カード比 210:300
+				// マークを非表示にする //
+				DelMark(mc, BackGreen, SelectMark);
+				// 手札を非表示にする //
+				DelMhand(mc, tx1, ty1, tx2, ty2, BackGreen);
+				// 場に出すカードを表示 //
+				c = 0;
+				for (b = 0; b < mc; b++)	//場に出すカードのデータを代入
+				{
+					if (Mhandd[5][b] == 1)
+					{
+						Fcard[0][c] = Mhandd[0][b];
+						Fcard[1][c] = Mhandd[1][b];
+						Fcard[2][c] = Mhandd[2][b];
+						Fcard[3][c] = Mhandd[3][b];
+						Fcard[4][c] = Mhandd[4][b];
+						DrawBoxAA(834, 390, 1300, 550, BackGreen, TRUE);
+						c++;
+					}
+				}
+				DisplayFcard(mc, fx1, fy1, fx2, fy2, Fcard);
+				//カードを詰める
+				//tx1 = 200, ty1 = 700;	//x:0+300=300 y:1080-1-300=779
+				//tx2 = tx1 + 210, ty2 = ty1 + 300;	//カード比 210:300
+				c = 0;
+				for (b = 0; b < mc; b++)
+				{
+					if (Mhandd[5][b] == 0)
+					{
+						Mhand[0][c] = Mhandd[0][b];
+						Mhand[1][c] = Mhandd[1][b];
+						Mhand[2][c] = Mhandd[2][b];
+						Mhand[3][c] = Mhandd[3][b];
+						Mhand[4][c] = Mhandd[4][b];
+						Mhandd[5][c] = 0;
+						DrawExtendGraph(tx1, ty1, tx2, ty2, Mhand[3][c], TRUE);
+						Mhandd[0][c] = Mhand[0][c];
+						Mhandd[1][c] = Mhand[1][c];
+						Mhandd[2][c] = Mhand[2][c];
+						Mhandd[3][c] = Mhand[3][c];
+						Mhandd[4][c] = Mhand[4][c];
+						tx1 += 100;	tx2 += 100;
+						c++;
+					}
+				}
+				mc -= sel;	//手札の枚数を出したカードの分だけ減らす
+				if (sel > 0)	//一枚でも出されたらパスされなかったと判定
+				{
+					passcount = 0;
+					DrawStringToHandle(50, 600, "パス", BackGreen, PassMessage);
+				}
+				//特殊ルールの適用
+				SPECIALRULESNUM(SpecialRulesNum, &Slash8Flag, &passcount, red, BackGreen, PassMessage, &turncount);
+				DrawStringToHandle(10, 10, "あなたのターン", BackGreen, CantSel);
+				WaitTimer(1000);
+				if (Slash8Flag == 1)
+					break;
+			}
+			// COMのターン //
+			ProcessMessage();
+			if (turnm != turncount)
+			{
+				if(turnc1 == turncount)	//COM1のターン
+				{
+					sel = 0, b = 0, c = 0, sn = 0;
+					fx1 = 960, fy1 = 470, fx2 = 0, fy2 = 0;
+					SpecialRulesNum = 0, Slash8Flag = 0;
+					//SelectCardClear(c1c, Chand1d);
+					for (b = 0; b < 54; b++)
+					{
+						Chand1d[5][b] = 0;
+					}
+					DrawStringToHandle(340, 250, "パス", BackGreen, PassMessage);
+					DrawStringToHandle(10, 10, "COM1のターン", black, CantSel);
+					WaitTimer(1000);
+					// カード選択 //
+					comjudge = Fcard[4][0];
+					//場のカード枚数を確認
+					comselcard = 0;
+					fieldcount = 0;
+					for (A = 0; A < 4; A++)
+					{
+						if (Fcard[4][A] >= 1)
+							fieldcount++;
+					}
+					if (fieldcount == 0)	//場に一枚もないとき
+						fieldcount = 1;
+					DrawFormatString(10, 600, black, "fc:%d", fieldcount);
+					DrawFormatString(10, 700, black, "cj:%d", comjudge);
+					WaitTimer(1000);
+					DrawFormatString(10, 600, BackGreen, "fc:%d", fieldcount);
+					DrawFormatString(10, 700, BackGreen, "cj:%d", comjudge);
+					//カードの選択枚数が場の枚数と一緒になるまで
+					while (sel < fieldcount)
+					{
+						ProcessMessage();
+						for (b = 0; b < 54; b++)
+						{
+							Chand1d[5][b] = 0;
+						}
+						sel = 0, b = 0, SpecialRulesNum = 0;
+						for (b = 0; b < c1c; b++)
+						{
+							if (Chand1d[4][b] > comjudge)	//場のカードより強ければ
+							{
+								if ((sel > 0 ) && (comselcard == Chand1d[1][b]))	//2枚目以降で1枚目と一緒のナンバなら
+								{
+									Chand1d[5][b] = 1;
+									sel++;
+								}
+								if (sel == 0)	//1枚目なら
+								{
+									comselcard = Chand1d[1][b];
+									SpecialRulesNum = Chand1d[1][b];
+									Chand1d[5][b] = 1;
+									sel++;
+								}
+							}
+							if (sel == fieldcount)	//選択枚数が一緒になったら
+								break;
+						}
+						// パスの選択(カードが出せなかった場合) //
+						if (sel == 0)
+						{
+							passcount++;
+							DrawStringToHandle(340, 250, "パス", black, PassMessage);
+							break;
+						}
+						//カードがsel以下だったら
+						if ((sel < fieldcount) && (sel > 0))
+						{
+							comjudge++;
+							sel = 0;
+						}
+					}
+					DrawFormatString(10, 800, black, "sel:%.1lf", sel);
+					WaitTimer(1000);
+					DrawFormatString(10, 800, BackGreen, "sel:%.1lf", sel);
+					// カードを場に出す //
+					c = 0;
+					fx1 -= (56 / sel) + (56 * (sel / 2)), fy1 = fy1 - 80;	//出すカードの1枚目の座標(左上)
+					fx2 = fx1 + 112, fy2 = fy1 + 160;
+					for (b = 0; b < c1c; b++)	//場に出すカードのデータを代入
+					{
+						if (Chand1d[5][b] == 1)
+						{
+							Fcard[0][c] = Chand1d[0][b];
+							Fcard[1][c] = Chand1d[1][b];
+							Fcard[2][c] = Chand1d[2][b];
+							Fcard[3][c] = Chand1d[3][b];
+							Fcard[4][c] = Chand1d[4][b];
+							//DrawBoxAA(834, 390, 1300, 550, BackGreen, TRUE);
+							c++;
+						}
+					}
+					DisplayFcard(c1c, fx1, fy1, fx2, fy2, Fcard);
+					//COM手札を非表示にする
+					tx1 = 190, ty1 = 70;	//x:0 y:0
+					tx2 = tx1 + 105, ty2 = ty1 + 150;	//カード比 105:150
+					DelChand(c1c, tx1, ty1, tx2, ty2, BackGreen);
+					//カードを詰める
+					tx1 = 180, ty1 = 70;	//x:0 y:0
+					tx2 = tx1 + 105, ty2 = ty1 + 150;	//カード比 105:150
+					c = 0;
+					for (b = 0; b < c1c; b++)
+					{
+						if (Chand1d[5][b] == 0)
+						{
+							Chand1[0][c] = Chand1d[0][b];
+							Chand1[1][c] = Chand1d[1][b];
+							Chand1[2][c] = Chand1d[2][b];
+							Chand1[3][c] = Chand1d[3][b];
+							Chand1[4][c] = Chand1d[4][b];
+							Chand1d[5][c] = 0;
+							DrawExtendGraph(tx1, ty1, tx2, ty2, Tb, TRUE);
+							Chand1d[0][c] = Chand1[0][c];
+							Chand1d[1][c] = Chand1[1][c];
+							Chand1d[2][c] = Chand1[2][c];
+							Chand1d[3][c] = Chand1[3][c];
+							Chand1d[4][c] = Chand1[4][c];
+							tx1 += 20;	tx2 += 20;
+							c++;
+						}
+					}
+					c1c -= sel;	//手札の枚数を出したカードの分だけ減らす
+					if (sel > 0)	//一枚でも出されたらパスされなかったと判定
+					{
+						passcount = 0;
+						DrawStringToHandle(340, 250, "パス", BackGreen, PassMessage);
+					}
+					//特殊ルールの適用
+					SPECIALRULESNUM(SpecialRulesNum, &Slash8Flag, &passcount, red, BackGreen, PassMessage, &turncount);
+					WaitTimer(1000);
+					DrawStringToHandle(10, 10, "COM1のターン", BackGreen, CantSel);
+					if (Slash8Flag == 1)
+						break;
+				}
+				if (turnc2 == turncount)	//COM2のターン
+				{
+					sel = 0, b = 0, c = 0, sn = 0;
+					fx1 = 960, fy1 = 470, fx2 = 0, fy2 = 0;
+					SpecialRulesNum = 0, Slash8Flag = 0;
+					//SelectCardClear(c2c, Chand2d);
+					for (b = 0; b < 54; b++)
+					{
+						Chand2d[5][b] = 0;
+					}
+					DrawStringToHandle(920, 250, "パス", BackGreen, PassMessage);
+					DrawStringToHandle(10, 10, "COM2のターン", black, CantSel);
+					WaitTimer(1000);
+					// カード選択 //
+					comjudge = Fcard[4][0];
+					//場のカード枚数を確認
+					comselcard = 0;
+					fieldcount = 0;
+					for (A = 0; A < 4; A++)
+					{
+						if (Fcard[4][A] >= 1)
+							fieldcount++;
+					}
+					if (fieldcount == 0)	//場に一枚もないとき
+						fieldcount = 1;
+					DrawFormatString(10, 600, black, "fc:%d", fieldcount);
+					DrawFormatString(10, 700, black, "cj:%d", comjudge);
+					WaitTimer(1000);
+					DrawFormatString(10, 600, BackGreen, "fc:%d", fieldcount);
+					DrawFormatString(10, 700, BackGreen, "cj:%d", comjudge);
+					//カードの選択枚数が場の枚数と一緒になるまで
+					while (sel < fieldcount)
+					{
+						ProcessMessage();
+						for (b = 0; b < 54; b++)
+						{
+							Chand2d[5][b] = 0;
+						}
+						sel = 0, b = 0, SpecialRulesNum = 0;
+						for (b = 0; b < c2c; b++)
+						{
+							if (Chand2d[4][b] > comjudge)	//場のカードより強いなら
+							{
+								if ((sel > 0) && (comselcard == Chand2d[1][b]))	//2枚目以降で1枚目と一緒のナンバなら
+								{
+									Chand2d[5][b] = 1;
+									sel++;
+								}
+								if (sel == 0)	//1枚目なら
+								{
+									comselcard = Chand2d[1][b];
+									SpecialRulesNum = Chand2d[1][b];
+									Chand2d[5][b] = 1;
+									sel++;
+								}
+							}
+							if (sel == fieldcount)	//選択枚数が場のカード枚数と等しくなったら
+								break;
+						}
+						// パスの選択(カードが出せなかった場合) //
+						if (sel == 0)
+						{
+							passcount++;
+							DrawStringToHandle(920, 250, "パス", black, PassMessage);
+							break;
+						}
+						//カードがsel以下だったら
+						if ((sel < fieldcount) && (sel > 0))
+						{
+							comjudge++;
+							sel = 0;
+						}
+					}
+					DrawFormatString(10, 800, black, "sel:%.1lf", sel);
+					WaitTimer(1000);
+					DrawFormatString(10, 800, BackGreen, "sel:%.1lf", sel);
+					// カードを場に出す //
+					c = 0;
+					fx1 -= (56 / sel) + (56 * (sel / 2)), fy1 = fy1 - 80;	//出すカードの1枚目の座標(左上)
+					fx2 = fx1 + 112, fy2 = fy1 + 160;
+					for (b = 0; b < c2c; b++)	//場に出すカードのデータを代入
+					{
+						if (Chand2d[5][b] == 1)
+						{
+							Fcard[0][c] = Chand2d[0][b];
+							Fcard[1][c] = Chand2d[1][b];
+							Fcard[2][c] = Chand2d[2][b];
+							Fcard[3][c] = Chand2d[3][b];
+							Fcard[4][c] = Chand2d[4][b];
+							c++;
+							//DrawBoxAA(834, 390, 1300, 550, BackGreen, TRUE);
+						}
+					}
+					DisplayFcard(c1c, fx1, fy1, fx2, fy2, Fcard);
+					//COM手札を非表示にする
+					tx1 = 780, ty1 = 70;	//x:0 y:0
+					tx2 = tx1 + 105, ty2 = ty1 + 150;	//カード比 105:150
+					DelChand(c2c, tx1, ty1, tx2, ty2, BackGreen);
+					//カードを詰める
+					tx1 = 780, ty1 = 70;	//x:0 y:0
+					tx2 = tx1 + 105, ty2 = ty1 + 150;	//カード比 105:150
+					c = 0;
+					for (b = 0; b < c2c; b++)
+					{
+						if (Chand2d[5][b] == 0)
+						{
+							Chand2[0][c] = Chand2d[0][b];
+							Chand2[1][c] = Chand2d[1][b];
+							Chand2[2][c] = Chand2d[2][b];
+							Chand2[3][c] = Chand2d[3][b];
+							Chand2[4][c] = Chand2d[4][b];
+							Chand2d[5][c] = 0;
+							DrawExtendGraph(tx1, ty1, tx2, ty2, Tb, TRUE);
+							Chand2d[0][c] = Chand2[0][c];
+							Chand2d[1][c] = Chand2[1][c];
+							Chand2d[2][c] = Chand2[2][c];
+							Chand2d[3][c] = Chand2[3][c];
+							Chand2d[4][c] = Chand2[4][c];
+							tx1 += 20;	tx2 += 20;
+							c++;
+						}
+					}
+					c2c -= sel;	//手札の枚数を出したカードの分だけ減らす
+					if (sel > 0)	//一枚でも出されたらパスされなかったと判定
+					{
+						passcount = 0;
+						DrawStringToHandle(970, 250, "パス", BackGreen, PassMessage);
+					}
+					//特殊ルールの適用
+					SPECIALRULESNUM(SpecialRulesNum, &Slash8Flag, &passcount, red, BackGreen, PassMessage, &turncount);
+					DrawStringToHandle(10, 10, "COM2のターン", BackGreen, CantSel);
+					WaitTimer(1000);
+					if (Slash8Flag == 1)
+						break;
+				}
+				if (turnc3 == turncount)	//COM3のターン
+				{
+					sel = 0, b = 0, c = 0, sn = 0;
+					fx1 = 960, fy1 = 470, fx2 = 0, fy2 = 0;
+					SpecialRulesNum = 0, Slash8Flag = 0;
+					//SelectCardClear(c3c, Chand3d);
+					for (b = 0; b < 54; b++)
+					{
+						Chand3d[5][b] = 0;
+					}
+					DrawStringToHandle(1600, 250, "パス", BackGreen, PassMessage);
+					DrawStringToHandle(10, 10, "COM3のターン", black, CantSel);
+					WaitTimer(1000);
+					// カード選択 //
+					comjudge = Fcard[4][0];
+					//場のカード枚数を確認
+					comselcard = 0;
+					fieldcount = 0;
+					for (A = 0; A < 4; A++)
+					{
+						if (Fcard[4][A] >= 1)
+							fieldcount++;
+					}
+					if (fieldcount == 0)	//場に一枚もないとき
+						fieldcount = 1;
+					DrawFormatString(10, 600, black, "fc:%d", fieldcount);
+					DrawFormatString(10, 700, black, "cj:%d", comjudge);
+					WaitTimer(1000);
+					DrawFormatString(10, 600, BackGreen, "fc:%d", fieldcount);
+					DrawFormatString(10, 700, BackGreen, "cj:%d", comjudge);
+					//カードの選択枚数が場の枚数と一緒になるまで
+					while (sel < fieldcount)
+					{
+						ProcessMessage();
+						for (b = 0; b < 54; b++)
+						{
+							Chand3d[5][b] = 0;
+						}
+						sel = 0, b = 0, SpecialRulesNum = 0;
+						for (b = 0; b < c3c; b++)
+						{
+							if (Chand3d[4][b] > comjudge)
+							{
+								if ((sel > 0) && (comselcard == Chand3d[1][b]))	//2枚目以降で1枚目と一緒のナンバなら
+								{
+									Chand3d[5][b] = 1;
+									sel++;
+								}
+								if (sel == 0)	//1枚目なら
+								{
+									comselcard = Chand3d[1][b];
+									SpecialRulesNum = Chand3d[1][b];
+									Chand3d[5][b] = 1;
+									sel++;
+								}
+							}
+							if (sel == fieldcount)
+								break;
+						}
+						// パスの選択(カードが出せなかった場合) //
+						if (sel == 0)
+						{
+							passcount++;
+							DrawStringToHandle(1600, 250, "パス", black, PassMessage);
+							break;
+						}
+						//カードがsel以下だったら
+						if ((sel < fieldcount) && (sel > 0))
+						{
+							comjudge++;
+							sel = 0;
+						}
+					}
+					DrawFormatString(10, 800, black, "sel:%.1lf", sel);
+					WaitTimer(1000);
+					DrawFormatString(10, 800, BackGreen, "sel:%.1lf", sel);
+					// カードを場に出す //
+					c = 0;
+					fx1 -= (56 / sel) + (56 * (sel / 2)), fy1 = fy1 - 80;	//出すカードの1枚目の座標(左上)
+					fx2 = fx1 + 112, fy2 = fy1 + 160;
+					for (b = 0; b < c3c; b++)	//場に出すカードのデータを代入
+					{
+						if (Chand3d[5][b] == 1)
+						{
+							Fcard[0][c] = Chand3d[0][b];
+							Fcard[1][c] = Chand3d[1][b];
+							Fcard[2][c] = Chand3d[2][b];
+							Fcard[3][c] = Chand3d[3][b];
+							Fcard[4][c] = Chand3d[4][b];
+							c++;
+							//DrawBoxAA(834, 390, 1300, 550, BackGreen, TRUE);
+						}
+					}
+					DisplayFcard(c1c, fx1, fy1, fx2, fy2, Fcard);
+					//COM手札を非表示にする
+					tx1 = 1450, ty1 = 70;	//x:0 y:0
+					tx2 = tx1 + 105, ty2 = ty1 + 150;	//カード比 105:150
+					DelChand(c3c, tx1, ty1, tx2, ty2, BackGreen);
+					//カードを詰める
+					tx1 = 1450, ty1 = 70;	//x:0 y:0
+					tx2 = tx1 + 105, ty2 = ty1 + 150;	//カード比 105:150
+					c = 0;
+					for (b = 0; b < c3c; b++)
+					{
+						if (Chand3d[5][b] == 0)
+						{
+							Chand3[0][c] = Chand3d[0][b];
+							Chand3[1][c] = Chand3d[1][b];
+							Chand3[2][c] = Chand3d[2][b];
+							Chand3[3][c] = Chand3d[3][b];
+							Chand3[4][c] = Chand3d[4][b];
+							Chand3d[5][c] = 0;
+							DrawExtendGraph(tx1, ty1, tx2, ty2, Tb, TRUE);
+							Chand3d[0][c] = Chand3[0][c];
+							Chand3d[1][c] = Chand3[1][c];
+							Chand3d[2][c] = Chand3[2][c];
+							Chand3d[3][c] = Chand3[3][c];
+							Chand3d[4][c] = Chand3[4][c];
+							tx1 += 20;	tx2 += 20;
+							c++;
+						}
+					}
+					c3c -= sel;	//手札の枚数を出したカードの分だけ減らす
+					if (sel > 0)	//一枚でも出されたらパスされなかったと判定
+					{
+						passcount = 0;
+						DrawStringToHandle(1600, 250, "パス", BackGreen, PassMessage);
+					}
+					//特殊ルールの適用
+					SPECIALRULESNUM(SpecialRulesNum, &Slash8Flag, &passcount, red, BackGreen, PassMessage, &turncount);
+					DrawStringToHandle(10, 10, "COM3のターン", BackGreen, CantSel);
+					WaitTimer(1000);
+					if (Slash8Flag == 1)
+						break;
+				}
+			}
+			// 勝敗決定 //
+			if (mc == 0 || c1c == 0 || c2c == 0 || c3c == 0)
+			{
+				DrawBoxAA(0, 0, 1919, 1079, BackGreen, TRUE);
+				DrawStringToHandle(470, 470, "ゲーム終了!", red, ClearMessage);
+				GameJudge = 1;
+				break;
+			}
+			turncount++;
+			if (turncount == 5)	//ターンが一周するように動作
+			{
+				turncount = 1;
+			}
+		}
+		// 場を流す //
+		if (passcount == 3)
+		{
+			DrawStringToHandle(540, 540, "場が流されました", red, CantSel);
+			WaitTimer(1000);
+			DrawBoxAA(834, 390, 1300, 550, BackGreen, TRUE);
+			DrawStringToHandle(50, 600, "パス", BackGreen, PassMessage);
+			DrawStringToHandle(340, 250, "パス", BackGreen, PassMessage);
+			DrawStringToHandle(920, 250, "パス", BackGreen, PassMessage);
+			DrawStringToHandle(1600, 250, "パス", BackGreen, PassMessage);
+			DrawStringToHandle(540, 540, "場が流されました", BackGreen, CantSel);
+			sel = 0;	//カードの選択枚数の初期化
+			c, sn = 0;	//変数の初期化
+			passcount = 0;
+			fieldcount = 0;
+			SpecialRulesNum = 0, Slash8Flag = 0;
+			for (b = 0; b < 4; b++)	//場のカードの初期化
+			{
+				Fcard[0][b] = 0;
+				Fcard[1][b] = 0;
+				Fcard[2][b] = 0;
+				Fcard[3][b] = 0;
+				Fcard[4][b] = 0;
+			}
+		}
+	}
+
+	WaitKey();				// キー入力待ち
+
+	DxLib_End();				// ＤＸライブラリ使用の終了処理
+
+	return 0;				// ソフトの終了 
+}
+
+// トランプshuffle関数 //
+void shuffle(int T[], int DECK)
+{
+	int A = 0, B, C;
+	for (A = 0; A < DECK; A++)
+	{
+		B = rand() % DECK;
+		C = T[A];
+		T[A] = T[B];
+		T[B] = C;
+	}
+}
+// DelMark関数 //
+void DelMark(int mc, int BackGreen, int SelectMark)
+{
+	int b, cx = 230, cy = 1000, sx = 230, sy = 649;
+	for (b = 0; b < mc; b++)	//選択マーク、選択カーソルの非表示
+	{
+		DrawStringToHandle(sx, sy, "*", BackGreen, SelectMark);
+		sx += 100;
+		DrawStringToHandle(cx, cy, "^", BackGreen, SelectMark);
+		cx += 100;
+	}
+}
+// DelMhand関数 //
+void DelMhand(int mc, int tx1, int ty1, int tx2, int ty2, int BackGreen)
+{
+	int b = 0;
+	for (b = 0; b < mc; b++)
+	{
+		DrawBoxAA(tx1, ty1, tx2, ty2, BackGreen, TRUE);
+		tx1 += 100;	tx2 += 100;
+	}
+}
+// DelChand関数 //
+void DelChand(int c, int tx1, int ty1, int tx2, int ty2, int BackGreen)
+{
+	int e;
+	for (e = 0; e < c; e++)
+	{
+		DrawBoxAA(tx1, ty1, tx2, ty2, BackGreen, TRUE);
+		tx1 += 20; tx2 += 20;
+	}
+}
+// DisplayFcard関数 //
+void DisplayFcard(int mc, int fx1, int fy1, int fx2, int fy2, int Fcard[5][4])
+{
+	int b;
+	for (b = 0; b < mc; b++)
+	{
+		DrawExtendGraph(fx1, fy1, fx2, fy2, Fcard[3][b], TRUE);
+		fx1 += 50;	fx2 += 50;
+	}
+}
+// Pass関数 //
+int Pass(int purple, int PassMessage, int BackGreen, int black, int b)
+{
+	while (CheckHitKey(KEY_INPUT_Y) == 0 && CheckHitKey(KEY_INPUT_N) == 0)
+	{
+		DrawStringToHandle(50, 600, "パスを選択しますか? はい>Y/いいえ>N ", purple, PassMessage);
+		if (CheckHitKey(KEY_INPUT_Y) == 1)
+		{
+			DrawStringToHandle(50, 600, "パスを選択しますか? はい>Y/いいえ>N ", BackGreen, PassMessage);
+			DrawStringToHandle(50, 600, "パスが選択されました", purple, PassMessage);
+			WaitTimer(500);
+			DrawStringToHandle(50, 600, "パスが選択されました", BackGreen, PassMessage);
+			WaitTimer(500);
+			b = 1;
+			return b;
+		}
+		if (CheckHitKey(KEY_INPUT_N) == 1)
+		{
+			DrawStringToHandle(50, 600, "パスを選択しますか? はい>Y/いいえ>N ", BackGreen, PassMessage);
+			b = 0;
+			return b;
+		}
+	}
+}
+// startPlayer関数 //
+int startPlayer(int b, int red, int BackGreen, int sPlayer, int *h, int *i, int *j)
+{
+	switch (b)
+	{
+		case 1:
+			//SetDrawScreen(DX_SCREEN_BACK);
+			DrawStringToHandle(500, 540, "あなたからスタートします", red, sPlayer);
+			WaitTimer(1500);
+			DrawStringToHandle(500, 540, "あなたからスタートします", BackGreen, sPlayer);
+			*h = 2, *i = 3, *j = 4;
+			break;
+		case 2:
+			//SetDrawScreen(DX_SCREEN_BACK);
+			DrawStringToHandle(550, 540, "COM3からスタートします", red, sPlayer);
+			WaitTimer(1500);
+			DrawStringToHandle(550, 540, "COM3からスタートします", BackGreen, sPlayer);
+			*h = 3, *i = 4, *j = 1;
+			break;
+		case 3:
+			//SetDrawScreen(DX_SCREEN_BACK);
+			DrawStringToHandle(550, 540, "COM2からスタートします", red, sPlayer);
+			WaitTimer(1500);
+			DrawStringToHandle(550, 540, "COM2からスタートします", BackGreen, sPlayer);
+			*h = 4, *i = 1, *j = 2;
+			break;
+		case 4:
+			//SetDrawScreen(DX_SCREEN_BACK);
+			DrawStringToHandle(550, 540, "COM1からスタートします", red, sPlayer);
+			WaitTimer(1500);
+			DrawStringToHandle(550, 540, "COM1からスタートします", BackGreen, sPlayer);
+			*h = 1, *i = 2, *j = 3;
+			break;
+	}
+	return b;
+}
+// SelectCardClear関数 //
+void SelectCardClear(int cardcount, int Card[6][54])
+{
+	int A;
+	for (A = 0; A < cardcount; A++)
+	{
+		Card[5][A] = 0;
+	}
+}
+// FieldCardCount関数 //
+int FieldCardCount(int Fcard[5][4], int fieldcount)
+{
+	int A;
+	fieldcount = 0;
+	for (A = 0; A < 4; A++)
+	{
+		if (Fcard[4][A] >= 1)
+		{
+			fieldcount++;
+		}
+	}
+	return fieldcount;
+}
+// SPECIALRULESNUM関数 //
+void SPECIALRULESNUM(int SpecialRulesNum, int *Slash8Flag, int *passcount, int red, int BackGreen, int PassMessage, int *turncount)
+{
+	switch (SpecialRulesNum)
+	{
+		case 8:
+			*Slash8Flag = 1;
+			*passcount = 3;
+			DrawStringToHandle(1200, 400, "~8切り~", red, PassMessage);
+			WaitTimer(1000);
+			DrawStringToHandle(1200, 400, "~8切り~", BackGreen, PassMessage);
+			break;
+	}
+
+}
