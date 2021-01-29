@@ -23,10 +23,11 @@ void DelMhand(int mc, int tx1, int ty1, int tx2, int ty2, int BackGreen);
 void DelChand(int c, int tx1, int ty1, int tx2, int ty2, int BackGreen);
 void DisplayFcard(int mc, int fx1, int fy1, int fx2, int fy2, int Fcard[5][4]);
 void SelectCardClear(int cardcount, int Card[6][54]);
-void SPECIALRULESNUM(int SpecialRulesNum, int *Slash8Flag, int *passcount, int red, int BackGreen, int PassMessage, int *turncount);
 int Pass(int purple, int PassMessage, int BackGreen, int black, int b);
 int startPlayer(int b, int red, int BackGreen, int sPlayer, int* h, int* i, int* j);
 int FieldCardCount(int Fcard[5][4], int fieldcount);
+void SPECIALRULESNUM(int SpecialRulesNum, int* Slash8Flag, int* passcount, int red, int BackGreen, int PassMessage, int* turncount);
+void REVOLUTION(int* revcount, int red, int BackGreen, int PassMessage);
 
 // プログラムは WinMain から始まります
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
@@ -47,7 +48,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	int Fcard[5][4] = {};
 	int dt = 0, b = 1, c, h = 0, i = 0, j = 0, r = 1, mark = 0, num = 0, com = 0, mc = 0, c1c = 0, c2c = 0, c3c = 0, s = 0, passcount = 0, A = 0;
 	int turnm = 0, turnc1 = 0, turnc2 = 0, turnc3 = 0, turncount = 0, fieldcount = 0, comjudge= 0, comselcard = 0;
-	int SpecialRulesNum = 0, Slash8Flag = 0;
+	int SpecialRulesNum = 0, Slash8Flag = 0, rev = 0, revcount = 0;
 	int GameJudge = 0;
 	int tx1 = 0, ty1 = 0, tx2 = 0, ty2 = 0, Cm = 0, cx = 0, cy = 0, sx = 0, sy = 0, sc = 0, fx1 = 960, fy1 = 470, fx2 = 0, fy2 = 0, sn = 0;
 	double sel = 0;
@@ -406,7 +407,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			if (turnm == turncount)
 			{
 				Cm = 0, sel = 0, b = 0, c = 0, sn = 0;
-				SpecialRulesNum = 0, Slash8Flag = 0;
+				SpecialRulesNum = 0, Slash8Flag = 0, rev = 0;
 				cx = 230, cy = 1000;	//カーソル表示用変数
 				sx = 230, sy = 649;		//"^"移動用変数
 				fx1 = 960, fy1 = 470, fx2 = 0, fy2 = 0;
@@ -415,6 +416,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				for (b = 0; b < 54; b++)
 				{
 					Mhandd[5][b] = 0;
+					if (Mhandd[4][b] == 99 || Mhandd[4][b] == 0) {
+						if (revcount % 2 == 1)	//革命時ジョーカーに0
+							Mhandd[4][b] = 0;
+						if (revcount % 2 == 0)	//非革命時ジョーカーに99
+							Mhandd[4][b] = 99;
+					}
 				}
 				DrawStringToHandle(10, 10, "あなたのターン", black, CantSel);
 				DrawStringToHandle(50, 600, "パス", BackGreen, PassMessage);
@@ -428,51 +435,103 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					{
 						ProcessMessage();
 						WaitTimer(200);
-						if (Cm >= 0 && Cm < mc)	//出すカードの選択
+						if (revcount % 2 == 0)	//非革命
 						{
-							if (Mhandd[5][Cm] == 0)	//未選択のカードを選択
+							if (Cm >= 0 && Cm < mc)	//出すカードの選択
 							{
-								c = Mhandd[1][Cm];
-								if (Mhandd[4][Cm] > comjudge)	//選択カードが場のカードよりも強いなら
+								if (Mhandd[5][Cm] == 0)	//未選択のカードを選択
 								{
-									if (sel == 0)	//最初に選択されたカードのナンバと一緒のカードしか出せない
+									c = Mhandd[1][Cm];
+									if (Mhandd[4][Cm] > comjudge)	//選択カードが場のカードよりも強いなら
 									{
-										sn = Mhandd[1][Cm];
-										SpecialRulesNum = Mhandd[1][Cm];
-										if (Mhandd[1][Cm] == 99)		//ジョーカーが最初に選択されたとき ※ジョーカーが最初に選択されるとバグる
+										if (sel == 0)	//最初に選択されたカードのナンバと一緒のカードしか出せない
+										{
+											sn = Mhandd[1][Cm];
+											SpecialRulesNum = Mhandd[1][Cm];
+											if (Mhandd[1][Cm] == 99)		//ジョーカーが最初に選択されたとき ※ジョーカーが最初に選択されるとバグる
+											{
+												sel++;
+												c = 100;
+												Mhandd[5][Cm] = 1;
+												DrawStringToHandle(sx, sy, "*", red, SelectMark);
+											}
+										}
+										if (c == sn)
 										{
 											sel++;
-											c = 100;
-											Mhandd[5][Cm] = 1;
 											DrawStringToHandle(sx, sy, "*", red, SelectMark);
+											Mhandd[5][Cm] = 1;
+										}
+										if (c != sn && c != 100)			//選択されたカードが違う数字でジョーカーでもない場合
+										{
+											DrawStringToHandle(50, 600, "このカードは選択できません!", red, CantSel);
+											WaitTimer(1000);
+											DrawStringToHandle(50, 600, "このカードは選択できません!", BackGreen, CantSel);
 										}
 									}
-									if (c == sn)
-									{
-										sel++;
-										DrawStringToHandle(sx, sy, "*", red, SelectMark);
-										Mhandd[5][Cm] = 1;
-									}
-									if (c != sn && c != 100)			//選択されたカードが違う数字でジョーカーでもない場合
+									else	//選択カードが場のカードよりも弱いなら
 									{
 										DrawStringToHandle(50, 600, "このカードは選択できません!", red, CantSel);
 										WaitTimer(1000);
 										DrawStringToHandle(50, 600, "このカードは選択できません!", BackGreen, CantSel);
 									}
 								}
-								else	//選択カードが場のカードよりも弱いなら
+								else      //選択済みカードを選択
 								{
-									DrawStringToHandle(50, 600, "このカードは選択できません!", red, CantSel);
-									WaitTimer(1000);
-									DrawStringToHandle(50, 600, "このカードは選択できません!", BackGreen, CantSel);
+									sn = 0;
+									DrawStringToHandle(sx, sy, "*", BackGreen, SelectMark);
+									sel--;
+									Mhandd[5][Cm] = 0;
 								}
 							}
-							else      //選択済みカードを選択
+						}if (revcount % 2 == 1)	//革命
+						{
+							if (Cm >= 0 && Cm < mc)	//出すカードの選択
 							{
-								sn = 0;
-								DrawStringToHandle(sx, sy, "*", BackGreen, SelectMark);
-								sel--;
-								Mhandd[5][Cm] = 0;
+								if (Mhandd[5][Cm] == 0)	//未選択のカードを選択
+								{
+									c = Mhandd[1][Cm];
+									if (Mhandd[4][Cm] < comjudge)	//選択カードが場のカードよりも強いなら
+									{
+										if (sel == 0)	//最初に選択されたカードのナンバと一緒のカードしか出せない
+										{
+											sn = Mhandd[1][Cm];
+											SpecialRulesNum = Mhandd[1][Cm];
+											if (Mhandd[1][Cm] == 99)		//ジョーカーが最初に選択されたとき ※ジョーカーが最初に選択されるとバグる
+											{
+												sel++;
+												c = 100;
+												Mhandd[5][Cm] = 1;
+												DrawStringToHandle(sx, sy, "*", red, SelectMark);
+											}
+										}
+										if (c == sn)
+										{
+											sel++;
+											DrawStringToHandle(sx, sy, "*", red, SelectMark);
+											Mhandd[5][Cm] = 1;
+										}
+										if (c != sn && c != 100)			//選択されたカードが違う数字でジョーカーでもない場合
+										{
+											DrawStringToHandle(50, 600, "このカードは選択できません!", red, CantSel);
+											WaitTimer(1000);
+											DrawStringToHandle(50, 600, "このカードは選択できません!", BackGreen, CantSel);
+										}
+									}
+									else	//選択カードが場のカードよりも弱いなら
+									{
+										DrawStringToHandle(50, 600, "このカードは選択できません!", red, CantSel);
+										WaitTimer(1000);
+										DrawStringToHandle(50, 600, "このカードは選択できません!", BackGreen, CantSel);
+									}
+								}
+								else      //選択済みカードを選択
+								{
+									sn = 0;
+									DrawStringToHandle(sx, sy, "*", BackGreen, SelectMark);
+									sel--;
+									Mhandd[5][Cm] = 0;
+								}
 							}
 						}
 					}
@@ -524,6 +583,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 						DrawStringToHandle(cx, cy, "^", white, SelectMark);
 					}
 				}
+				// 革命の判定 //
+				if (sel == 4)
+					rev = 1;
 				// 選択されたカードを出す カード比112:160 //
 				fx1 -= (56 / sel) + (56 * (sel / 2)), fy1 = fy1 - 80;	//出すカードの1枚目の座標(左上)
 				fx2 = fx1 + 112, fy2 = fy1 + 160;
@@ -573,6 +635,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 						c++;
 					}
 				}
+				// 革命実行 //
+				if (rev == 1)
+				{
+					REVOLUTION(&revcount, red, BackGreen, PassMessage);
+				}
 				mc -= sel;	//手札の枚数を出したカードの分だけ減らす
 				if (sel > 0)	//一枚でも出されたらパスされなかったと判定
 				{
@@ -594,11 +661,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				{
 					sel = 0, b = 0, c = 0, sn = 0;
 					fx1 = 960, fy1 = 470, fx2 = 0, fy2 = 0;
-					SpecialRulesNum = 0, Slash8Flag = 0;
+					SpecialRulesNum = 0, Slash8Flag = 0, rev = 0;
 					//SelectCardClear(c1c, Chand1d);
 					for (b = 0; b < 54; b++)
 					{
 						Chand1d[5][b] = 0;
+						if (Chand1d[4][b] == 99 || Chand1d[4][b] == 0) {
+							if (revcount % 2 == 1)	//革命時ジョーカーに0
+								Chand1d[4][b] = 0;
+							if (revcount % 2 == 0)	//非革命時ジョーカーに99
+								Chand1d[4][b] = 99;
+						}
 					}
 					DrawStringToHandle(340, 250, "パス", BackGreen, PassMessage);
 					DrawStringToHandle(10, 10, "COM1のターン", black, CantSel);
@@ -615,11 +688,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					}
 					if (fieldcount == 0)	//場に一枚もないとき
 						fieldcount = 1;
-					DrawFormatString(10, 600, black, "fc:%d", fieldcount);
+					/*DrawFormatString(10, 600, black, "fc:%d", fieldcount);
 					DrawFormatString(10, 700, black, "cj:%d", comjudge);
 					WaitTimer(1000);
 					DrawFormatString(10, 600, BackGreen, "fc:%d", fieldcount);
-					DrawFormatString(10, 700, BackGreen, "cj:%d", comjudge);
+					DrawFormatString(10, 700, BackGreen, "cj:%d", comjudge);*/
 					//カードの選択枚数が場の枚数と一緒になるまで
 					while (sel < fieldcount)
 					{
@@ -631,23 +704,46 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 						sel = 0, b = 0, SpecialRulesNum = 0;
 						for (b = 0; b < c1c; b++)
 						{
-							if (Chand1d[4][b] > comjudge)	//場のカードより強ければ
+							if (revcount % 2 == 0)	//非革命
 							{
-								if ((sel > 0 ) && (comselcard == Chand1d[1][b]))	//2枚目以降で1枚目と一緒のナンバなら
+								if (Chand1d[4][b] > comjudge)	//場のカードより強ければ ※非革命時
 								{
-									Chand1d[5][b] = 1;
-									sel++;
+									if ((sel > 0) && (comselcard == Chand1d[1][b]))	//2枚目以降で1枚目と一緒のナンバなら
+									{
+										Chand1d[5][b] = 1;
+										sel++;
+									}
+									if (sel == 0)	//1枚目なら
+									{
+										comselcard = Chand1d[1][b];
+										SpecialRulesNum = Chand1d[1][b];
+										Chand1d[5][b] = 1;
+										sel++;
+									}
 								}
-								if (sel == 0)	//1枚目なら
-								{
-									comselcard = Chand1d[1][b];
-									SpecialRulesNum = Chand1d[1][b];
-									Chand1d[5][b] = 1;
-									sel++;
-								}
+								if (sel == fieldcount)	//選択枚数が一緒になったら
+									break;
 							}
-							if (sel == fieldcount)	//選択枚数が一緒になったら
-								break;
+							if (revcount % 2 == 1)	//革命
+							{
+								if (Chand1d[4][b] < comjudge)	//場のカードより強ければ ※革命時
+								{
+									if ((sel > 0) && (comselcard == Chand1d[1][b]))	//2枚目以降で1枚目と一緒のナンバなら
+									{
+										Chand1d[5][b] = 1;
+										sel++;
+									}
+									if (sel == 0)	//1枚目なら
+									{
+										comselcard = Chand1d[1][b];
+										SpecialRulesNum = Chand1d[1][b];
+										Chand1d[5][b] = 1;
+										sel++;
+									}
+								}
+								if (sel == fieldcount)	//選択枚数が一緒になったら
+									break;
+							}
 						}
 						// パスの選択(カードが出せなかった場合) //
 						if (sel == 0)
@@ -663,9 +759,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 							sel = 0;
 						}
 					}
-					DrawFormatString(10, 800, black, "sel:%.1lf", sel);
+					// 革命の判定 //
+					if (sel == 4)
+						rev = 1;
+					/*DrawFormatString(10, 800, black, "sel:%.1lf", sel);
 					WaitTimer(1000);
-					DrawFormatString(10, 800, BackGreen, "sel:%.1lf", sel);
+					DrawFormatString(10, 800, BackGreen, "sel:%.1lf", sel);*/
 					// カードを場に出す //
 					c = 0;
 					fx1 -= (56 / sel) + (56 * (sel / 2)), fy1 = fy1 - 80;	//出すカードの1枚目の座標(左上)
@@ -711,6 +810,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 							tx1 += 20;	tx2 += 20;
 							c++;
 						}
+					}// 革命実行 //
+					if (rev == 1)
+					{
+						REVOLUTION(&revcount, red, BackGreen, PassMessage);
 					}
 					c1c -= sel;	//手札の枚数を出したカードの分だけ減らす
 					if (sel > 0)	//一枚でも出されたらパスされなかったと判定
@@ -734,6 +837,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					for (b = 0; b < 54; b++)
 					{
 						Chand2d[5][b] = 0;
+						if (Chand2d[4][b] == 99 || Chand2d[4][b] == 0) {
+							if (revcount % 2 == 1)	//革命時ジョーカーに0
+								Chand2d[4][b] = 0;
+							if (revcount % 2 == 0)	//非革命時ジョーカーに99
+								Chand2d[4][b] = 99;
+						}
 					}
 					DrawStringToHandle(920, 250, "パス", BackGreen, PassMessage);
 					DrawStringToHandle(10, 10, "COM2のターン", black, CantSel);
@@ -750,11 +859,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					}
 					if (fieldcount == 0)	//場に一枚もないとき
 						fieldcount = 1;
-					DrawFormatString(10, 600, black, "fc:%d", fieldcount);
+					/*DrawFormatString(10, 600, black, "fc:%d", fieldcount);
 					DrawFormatString(10, 700, black, "cj:%d", comjudge);
 					WaitTimer(1000);
 					DrawFormatString(10, 600, BackGreen, "fc:%d", fieldcount);
-					DrawFormatString(10, 700, BackGreen, "cj:%d", comjudge);
+					DrawFormatString(10, 700, BackGreen, "cj:%d", comjudge);*/
 					//カードの選択枚数が場の枚数と一緒になるまで
 					while (sel < fieldcount)
 					{
@@ -766,23 +875,46 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 						sel = 0, b = 0, SpecialRulesNum = 0;
 						for (b = 0; b < c2c; b++)
 						{
-							if (Chand2d[4][b] > comjudge)	//場のカードより強いなら
+							if (revcount % 2 == 0)	//非革命
 							{
-								if ((sel > 0) && (comselcard == Chand2d[1][b]))	//2枚目以降で1枚目と一緒のナンバなら
+								if (Chand2d[4][b] > comjudge)	//場のカードより強いなら ※非革命時
 								{
-									Chand2d[5][b] = 1;
-									sel++;
+									if ((sel > 0) && (comselcard == Chand2d[1][b]))	//2枚目以降で1枚目と一緒のナンバなら
+									{
+										Chand2d[5][b] = 1;
+										sel++;
+									}
+									if (sel == 0)	//1枚目なら
+									{
+										comselcard = Chand2d[1][b];
+										SpecialRulesNum = Chand2d[1][b];
+										Chand2d[5][b] = 1;
+										sel++;
+									}
 								}
-								if (sel == 0)	//1枚目なら
-								{
-									comselcard = Chand2d[1][b];
-									SpecialRulesNum = Chand2d[1][b];
-									Chand2d[5][b] = 1;
-									sel++;
-								}
+								if (sel == fieldcount)	//選択枚数が場のカード枚数と等しくなったら
+									break;
 							}
-							if (sel == fieldcount)	//選択枚数が場のカード枚数と等しくなったら
-								break;
+							if (revcount % 2 == 1)	//革命
+							{
+								if (Chand2d[4][b] < comjudge)	//場のカードより強いなら ※革命時
+								{
+									if ((sel > 0) && (comselcard == Chand2d[1][b]))	//2枚目以降で1枚目と一緒のナンバなら
+									{
+										Chand2d[5][b] = 1;
+										sel++;
+									}
+									if (sel == 0)	//1枚目なら
+									{
+										comselcard = Chand2d[1][b];
+										SpecialRulesNum = Chand2d[1][b];
+										Chand2d[5][b] = 1;
+										sel++;
+									}
+								}
+								if (sel == fieldcount)	//選択枚数が場のカード枚数と等しくなったら
+									break;
+							}
 						}
 						// パスの選択(カードが出せなかった場合) //
 						if (sel == 0)
@@ -798,9 +930,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 							sel = 0;
 						}
 					}
-					DrawFormatString(10, 800, black, "sel:%.1lf", sel);
+					// 革命の判定 //
+					if (sel == 4)
+						rev = 1;
+					/*DrawFormatString(10, 800, black, "sel:%.1lf", sel);
 					WaitTimer(1000);
-					DrawFormatString(10, 800, BackGreen, "sel:%.1lf", sel);
+					DrawFormatString(10, 800, BackGreen, "sel:%.1lf", sel);*/
 					// カードを場に出す //
 					c = 0;
 					fx1 -= (56 / sel) + (56 * (sel / 2)), fy1 = fy1 - 80;	//出すカードの1枚目の座標(左上)
@@ -847,6 +982,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 							c++;
 						}
 					}
+					// 革命実行 //
+					if (rev == 1)
+					{
+						REVOLUTION(&revcount, red, BackGreen, PassMessage);
+					}
 					c2c -= sel;	//手札の枚数を出したカードの分だけ減らす
 					if (sel > 0)	//一枚でも出されたらパスされなかったと判定
 					{
@@ -869,6 +1009,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					for (b = 0; b < 54; b++)
 					{
 						Chand3d[5][b] = 0;
+						if (Chand3d[4][b] == 99 || Chand3d[4][b] == 0) {
+							if (revcount % 2 == 1)	//革命時ジョーカーに0
+								Chand3d[4][b] = 0;
+							if (revcount % 2 == 0)	//非革命時ジョーカーに99
+								Chand3d[4][b] = 99;
+						}
 					}
 					DrawStringToHandle(1600, 250, "パス", BackGreen, PassMessage);
 					DrawStringToHandle(10, 10, "COM3のターン", black, CantSel);
@@ -885,11 +1031,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 					}
 					if (fieldcount == 0)	//場に一枚もないとき
 						fieldcount = 1;
-					DrawFormatString(10, 600, black, "fc:%d", fieldcount);
+					/*DrawFormatString(10, 600, black, "fc:%d", fieldcount);
 					DrawFormatString(10, 700, black, "cj:%d", comjudge);
 					WaitTimer(1000);
 					DrawFormatString(10, 600, BackGreen, "fc:%d", fieldcount);
-					DrawFormatString(10, 700, BackGreen, "cj:%d", comjudge);
+					DrawFormatString(10, 700, BackGreen, "cj:%d", comjudge);*/
 					//カードの選択枚数が場の枚数と一緒になるまで
 					while (sel < fieldcount)
 					{
@@ -901,23 +1047,46 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 						sel = 0, b = 0, SpecialRulesNum = 0;
 						for (b = 0; b < c3c; b++)
 						{
-							if (Chand3d[4][b] > comjudge)
+							if (revcount % 2 == 0)	//非革命
 							{
-								if ((sel > 0) && (comselcard == Chand3d[1][b]))	//2枚目以降で1枚目と一緒のナンバなら
+								if (Chand3d[4][b] > comjudge)	//場のカードよりも強いなら ※非革命時
 								{
-									Chand3d[5][b] = 1;
-									sel++;
+									if ((sel > 0) && (comselcard == Chand3d[1][b]))	//2枚目以降で1枚目と一緒のナンバなら
+									{
+										Chand3d[5][b] = 1;
+										sel++;
+									}
+									if (sel == 0)	//1枚目なら
+									{
+										comselcard = Chand3d[1][b];
+										SpecialRulesNum = Chand3d[1][b];
+										Chand3d[5][b] = 1;
+										sel++;
+									}
 								}
-								if (sel == 0)	//1枚目なら
-								{
-									comselcard = Chand3d[1][b];
-									SpecialRulesNum = Chand3d[1][b];
-									Chand3d[5][b] = 1;
-									sel++;
-								}
+								if (sel == fieldcount)
+									break;
 							}
-							if (sel == fieldcount)
-								break;
+							if (revcount % 2 == 1)	//革命
+							{
+								if (Chand3d[4][b] < comjudge)	//場のカードよりも強いなら ※革命時
+								{
+									if ((sel > 0) && (comselcard == Chand3d[1][b]))	//2枚目以降で1枚目と一緒のナンバなら
+									{
+										Chand3d[5][b] = 1;
+										sel++;
+									}
+									if (sel == 0)	//1枚目なら
+									{
+										comselcard = Chand3d[1][b];
+										SpecialRulesNum = Chand3d[1][b];
+										Chand3d[5][b] = 1;
+										sel++;
+									}
+								}
+								if (sel == fieldcount)
+									break;
+							}
 						}
 						// パスの選択(カードが出せなかった場合) //
 						if (sel == 0)
@@ -933,9 +1102,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 							sel = 0;
 						}
 					}
-					DrawFormatString(10, 800, black, "sel:%.1lf", sel);
+					// 革命の判定 //
+					if (sel == 4)
+						rev = 1;
+					/*DrawFormatString(10, 800, black, "sel:%.1lf", sel);
 					WaitTimer(1000);
-					DrawFormatString(10, 800, BackGreen, "sel:%.1lf", sel);
+					DrawFormatString(10, 800, BackGreen, "sel:%.1lf", sel);*/
 					// カードを場に出す //
 					c = 0;
 					fx1 -= (56 / sel) + (56 * (sel / 2)), fy1 = fy1 - 80;	//出すカードの1枚目の座標(左上)
@@ -982,6 +1154,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 							c++;
 						}
 					}
+					// 革命実行 //
+					if (rev == 1)
+					{
+						REVOLUTION(&revcount, red, BackGreen, PassMessage);
+					}
 					c3c -= sel;	//手札の枚数を出したカードの分だけ減らす
 					if (sel > 0)	//一枚でも出されたらパスされなかったと判定
 					{
@@ -999,8 +1176,22 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			// 勝敗決定 //
 			if (mc == 0 || c1c == 0 || c2c == 0 || c3c == 0)
 			{
+				b = 0;
 				DrawBoxAA(0, 0, 1919, 1079, BackGreen, TRUE);
 				DrawStringToHandle(470, 470, "ゲーム終了!", red, ClearMessage);
+				WaitTimer(1000);
+				DrawStringToHandle(470, 470, "ゲーム終了!", BackGreen, ClearMessage);
+				if (mc == 0)
+					DrawStringToHandle(200, 470, "プレイヤーの勝利!", red, ClearMessage);
+				else
+				{
+					if (c1c == 0)
+						DrawStringToHandle(300, 470, "COM1の勝利!", red, ClearMessage);
+					if (c2c == 0)
+						DrawStringToHandle(300, 470, "COM2の勝利!", red, ClearMessage);
+					if (c3c == 0)
+						DrawStringToHandle(300, 470, "COM3の勝利!", red, ClearMessage);
+				}
 				GameJudge = 1;
 				break;
 			}
@@ -1195,4 +1386,20 @@ void SPECIALRULESNUM(int SpecialRulesNum, int *Slash8Flag, int *passcount, int r
 			break;
 	}
 
+}
+// REVOLUTION関数 //
+void REVOLUTION(int *revcount, int red, int BackGreen, int PassMessage)
+{
+	*revcount += 1;
+	if (*revcount % 2 == 1)	//革命が起きた時
+	{
+		DrawStringToHandle(1400, 600, "| = 革 命 = |", red, PassMessage);
+	}
+	if (*revcount % 2 == 0)	//革命返しされたとき
+	{
+		DrawStringToHandle(1400, 600, "| = 革 命 = |", BackGreen, PassMessage);
+		DrawStringToHandle(1200, 600, "| = 革 命 返 し ! = |", red, PassMessage);
+		WaitTimer(1000);
+		DrawStringToHandle(1200, 600, "| = 革 命 返 し ! = |", BackGreen, PassMessage);
+	}
 }
